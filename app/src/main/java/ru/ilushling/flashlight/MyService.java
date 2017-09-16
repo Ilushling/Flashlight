@@ -76,9 +76,9 @@ public class MyService extends Service {
         String Action = intent.getAction();
 
         if (Action == "switch" || Action == "widget") {
-            switchFlash();
+            new Thread(switchRunnable).start();
         } else if (Action == "switchSos") {
-            switchSos();
+            new Thread(switchSosRunnable).start();
         } else {
             from_turnPowerFlash = intent.getBooleanExtra("power_button", false);
             if (from_turnPowerFlash) {
@@ -87,7 +87,7 @@ public class MyService extends Service {
                     powerButtonTask.run();
                 }
                 if (buttonPowercount >= 2) {
-                    switchFlash();
+                    //switchFlash();
                     buttonPowercount = 0;
                 } else {
                     buttonPowercount++;
@@ -123,45 +123,55 @@ public class MyService extends Service {
             isCameraGet = true;
         } catch (Exception e) {
             isCameraGet = false;
+            isFlash = false;
+            isFlashSos = false;
             Log.e(TAG, "GetCamera: " + e.getMessage());
         }
     }
 
-    void switchFlash() {
-        try {
-            if (isFlash || isFlashSos) {
-                // turn off flash
-                turnOffFlash(null);
-            } else if (!isFlash) {
-                // turn on flash
-                turnOnFlash(null);
+    // Switch Flash
+    private Runnable switchRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (isFlash || isFlashSos) {
+                    // turn off flash
+                    turnOffFlash(null);
+                } else if (!isFlash) {
+                    // turn on flash
+                    turnOnFlash(null);
+                }
+            } catch (RuntimeException e) {
+                Log.e(TAG, "SwitchFlash: " + e.getMessage());
             }
-        } catch (RuntimeException e) {
-            Log.e(TAG, "SwitchFlash: " + e.getMessage());
         }
-    }
-
-    void switchSos() {
-        try {
-            if (isFlashSos) {
-                // turn off flash
-                turnOffFlash(null);
-                isFlashSos = false;
-            } else if (!isFlash && !isFlashSos) {
-                // turn on flash
-                turnOnSos();
+    };
+    // Switch FlashSos
+    private Runnable switchSosRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (isFlashSos) {
+                    // turn off flash
+                    turnOffFlash(null);
+                    isFlashSos = false;
+                } else if (!isFlash && !isFlashSos) {
+                    // turn on flash
+                    turnOnSos();
+                }
+            } catch (RuntimeException e) {
+                Log.e(TAG, "SwitchSos: " + e.getMessage());
             }
-        } catch (RuntimeException e) {
-            Log.e(TAG, "SwitchSos: " + e.getMessage());
         }
-    }
+    };
 
     void turnOnSos() {
+        isFlashSos = true;
+
         if (!isCameraGet) {
             getCamera();
         }
 
-        isFlashSos = true;
         flashSosTimer = 0;
         flashSosTimerTask.run();
     }
@@ -173,7 +183,7 @@ public class MyService extends Service {
             isFlash = true;
             // UI
             if (method != "sos") {
-                updateUI();
+                updateUI.run();
             }
 
             // Getting camera too long for UI
@@ -208,7 +218,7 @@ public class MyService extends Service {
                             params.setFlashMode(Parameters.FLASH_MODE_RED_EYE);
                         } else {
                             isFlash = false;
-                            updateUI();
+                            updateUI.run();
                         }
                         if (Build.VERSION.SDK_INT > 10) {
                             try {
@@ -225,7 +235,7 @@ public class MyService extends Service {
             }
         } catch (Exception e) {
             Log.e(TAG, "Failed to get camera: " + e.getMessage());
-            isFlash = false;
+            turnOffFlash(null);
         }
     }
 
@@ -233,6 +243,10 @@ public class MyService extends Service {
     // TURN OFF FLASH
     void turnOffFlash(String method) {
         try {
+            // Update UI
+            isFlash = false;
+            updateUI.run();
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 mCameraManager.setTorchMode(mCameraId, false);
                 if (method != "sos") {
@@ -266,15 +280,13 @@ public class MyService extends Service {
                 }
                 isFlash = false;
             }
-
             // Update UI
-            Intent intent = new Intent(MyService.this, MyReceiver.class);
-            intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
-            intent.setAction(MyReceiver.ACTION_IS_FLASH);
-            intent.putExtra("isFlash", isFlash);
-            sendBroadcast(intent);
+            isFlash = false;
+            updateUI.run();
         } catch (Exception e) {
             Log.e(TAG, "Failed turn off flash: " + e.getMessage());
+            // Update UI
+            turnOffFlash(null);
         }
     }
 
@@ -327,25 +339,17 @@ public class MyService extends Service {
         }
     };
 
-
-    void updateUI() {
-        Intent intent = new Intent(MyService.this, MyReceiver.class);
-        intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
-        intent.setAction(MyReceiver.ACTION_IS_FLASH);
-        intent.putExtra("isFlash", isFlash);
-        sendBroadcast(intent);
-    }
-
-    /*
-    // Get camera async
-    private class getCameraAsync extends AsyncTask<Void, Void, Camera> {
+    private Runnable updateUI = new Runnable() {
         @Override
-        protected Camera doInBackground(Void... voids) {
-            getCamera();
-            return null;
+        public void run() {
+            Intent intent = new Intent(MyService.this, MyReceiver.class);
+            intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+            intent.setAction(MyReceiver.ACTION_IS_FLASH);
+            intent.putExtra("isFlash", isFlash);
+            sendBroadcast(intent);
         }
     };
-    */
+
     @Override
     public IBinder onBind(Intent intent) {
         return null;

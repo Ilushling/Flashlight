@@ -24,13 +24,13 @@ public class MyReceiver extends BroadcastReceiver {
         if (intent.getAction().equals(ACTION_IS_FLASH)) {
             // Flash
             isFlash = intent.getBooleanExtra("isFlash", false);
-            // Widget
-            updateWidget(context, isFlash);
             // Activity
             Intent it = new Intent();
             it.setAction(MyReceiver.ACTION_IS_FLASH);
             it.putExtra("isFlash", isFlash);
             context.sendBroadcast(it);
+            // Widget
+            updateWidget(context, isFlash);
         }
         if (intent.getAction().equals(ACTION_APP)) {
             Intent i = new Intent(context, MyService.class);
