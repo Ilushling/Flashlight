@@ -33,27 +33,27 @@ public class MyReceiver extends BroadcastReceiver {
             updateWidget(context, isFlash);
         }
         if (intent.getAction().equals(ACTION_APP)) {
-            Intent i = new Intent(context, MyService.class);
+            Intent i = new Intent(context, FlashlightService.class);
             i.setAction("app");
             context.startService(i);
         }
         if (intent.getAction().equals(ACTION_WIDGET)) {
-            Intent i = new Intent(context, MyService.class);
+            Intent i = new Intent(context, FlashlightService.class);
             i.setAction("widget");
             context.startService(i);
         }
         if (intent.getAction().equals(ACTION_SWITCH)) {
-            Intent i = new Intent(context, MyService.class);
+            Intent i = new Intent(context, FlashlightService.class);
             i.setAction("switch");
             context.startService(i);
         }
         if (intent.getAction().equals(ACTION_SWITCH_SOS)) {
-            Intent i = new Intent(context, MyService.class);
+            Intent i = new Intent(context, FlashlightService.class);
             i.setAction("switchSos");
             context.startService(i);
         }
         if (intent.getAction().equals(ACTION_SERVICE_OFF)) {
-            Intent i = new Intent(context, MyService.class);
+            Intent i = new Intent(context, FlashlightService.class);
             i.setAction("serviceOff");
             context.stopService(i);
         }
@@ -61,7 +61,7 @@ public class MyReceiver extends BroadcastReceiver {
         if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
             screenOff = true;
 
-            Intent i = new Intent(context, MyService.class);
+            Intent i = new Intent(context, FlashlightService.class);
             i.putExtra("screen_state", screenOff);
             i.putExtra("power_button", true);
             context.startService(i);
@@ -69,7 +69,7 @@ public class MyReceiver extends BroadcastReceiver {
         } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
             screenOff = false;
 
-            Intent i = new Intent(context, MyService.class);
+            Intent i = new Intent(context, FlashlightService.class);
             i.putExtra("screen_state", screenOff);
             i.putExtra("power_button", true);
             context.startService(i);

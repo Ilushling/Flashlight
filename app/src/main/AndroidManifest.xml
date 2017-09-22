@@ -51,7 +51,7 @@
         </receiver>
 
         <service
-            android:name=".MyService"
+            android:name=".FlashlightService"
             android:enabled="true"
             android:exported="true"/>
 

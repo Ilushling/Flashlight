@@ -64,7 +64,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         intent.setAction(MyReceiver.ACTION_APP);
         sendBroadcast(intent);
 
-        //startService(new Intent(this, MyService.class));
+        //startService(new Intent(this, FlashlightService.class));
     }
 
     @Override

@@ -19,7 +19,7 @@ import android.util.Log;
 import java.io.IOException;
 import java.util.List;
 
-public class MyService extends Service {
+public class FlashlightService extends Service {
 
     String TAG = "Service";
 
@@ -73,11 +73,11 @@ public class MyService extends Service {
     }
 
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String Action = intent.getAction();
+        String action = intent.getAction();
 
-        if (Action == "switch" || Action == "widget") {
+        if (action == "switch" || action == "widget") {
             new Thread(switchRunnable).start();
-        } else if (Action == "switchSos") {
+        } else if (action == "switchSos") {
             new Thread(switchSosRunnable).start();
         } else {
             from_turnPowerFlash = intent.getBooleanExtra("power_button", false);
@@ -92,6 +92,10 @@ public class MyService extends Service {
                 } else {
                     buttonPowercount++;
                 }
+            }
+
+            if (action == "app") {
+                updateUI.run();
             }
         }
 
@@ -342,7 +346,7 @@ public class MyService extends Service {
     private Runnable updateUI = new Runnable() {
         @Override
         public void run() {
-            Intent intent = new Intent(MyService.this, MyReceiver.class);
+            Intent intent = new Intent(FlashlightService.this, MyReceiver.class);
             intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
             intent.setAction(MyReceiver.ACTION_IS_FLASH);
             intent.putExtra("isFlash", isFlash);
@@ -359,7 +363,7 @@ public class MyService extends Service {
         super.onDestroy();
         turnOffFlash(null);
         unregisterReceiver(mReceiver);
-        Log.e(TAG, "MyService onDestroy");
+        Log.e(TAG, "FlashlightService onDestroy");
     }
 
 
