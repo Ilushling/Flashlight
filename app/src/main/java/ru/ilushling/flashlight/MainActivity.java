@@ -4,11 +4,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.drawable.Drawable;
+import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 
@@ -24,7 +27,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     Camera camera;
     Camera.Parameters params;
 
-    Drawable buttonSwitchOn, buttonSwitchOff;
+    Bitmap buttonSwitchOn, buttonSwitchOff;
 
 
     @Override
@@ -35,8 +38,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonSwitch = (ImageButton) findViewById(buttonswitch);
         buttonSos = (ImageButton) findViewById(buttonsos);
 
-        buttonSwitchOn = getResources().getDrawable(R.drawable.main_button_on);
-        buttonSwitchOff = getResources().getDrawable(R.drawable.main_button_off);
+        Resources res = this.getResources();
+
+        buttonSwitchOn = BitmapFactory.decodeResource(res, R.drawable.main_button_on);
+        buttonSwitchOff = BitmapFactory.decodeResource(res, R.drawable.main_button_off);
+
+        //Bitmap b = BitmapFactory.decodeResource(res, id);
 
         if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
             View v = this.getWindow().getDecorView();
@@ -70,7 +77,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(broadcastReceiver);
+        try {
+            // Clean image memory
+            buttonSwitchOn.recycle();
+            buttonSwitchOff.recycle();
+            unregisterReceiver(broadcastReceiver);
+        } catch (Exception e) {
+            Log.e(TAG, "cant unregister receiver");
+        }
     }
 
     @Override
@@ -114,10 +128,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if (isFlash) {
                         // Change Image
                         //Log.e(TAG, "Flash");
-                        buttonSwitch.setImageDrawable(buttonSwitchOn);
+                        buttonSwitch.setImageBitmap(buttonSwitchOn);
                     } else {
                         // Change Image
-                        buttonSwitch.setImageDrawable(buttonSwitchOff);
+                        buttonSwitch.setImageBitmap(buttonSwitchOff);
                     }
                     break;
             }
