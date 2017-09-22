@@ -58,18 +58,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         buttonSos.setOnClickListener(this);
         // присвоим обработчик кнопке
         buttonSwitch.setOnClickListener(this);
-
-        // Service
-        Intent intent = new Intent(MainActivity.this, MyReceiver.class);
-        intent.setAction(MyReceiver.ACTION_APP);
-        sendBroadcast(intent);
-
-        //startService(new Intent(this, FlashlightService.class));
     }
 
     @Override
     protected void onStart() {
         super.onStart();
+        // Service
+        Intent intent = new Intent(MainActivity.this, MyReceiver.class);
+        intent.setAction(MyReceiver.ACTION_APP);
+        sendBroadcast(intent);
 
         registerReceiver(broadcastReceiver, new IntentFilter(MyReceiver.ACTION_IS_FLASH));
     }
