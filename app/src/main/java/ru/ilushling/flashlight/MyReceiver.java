@@ -10,7 +10,7 @@ import android.widget.RemoteViews;
 public class MyReceiver extends BroadcastReceiver {
 
     String TAG = "MyReceiver";
-    private boolean screenOff, isFlash;
+    private boolean screenState, isFlash;
 
     public static final String ACTION_IS_FLASH = "ru.ilushling.flashlight.isflash",
             ACTION_APP = "ru.ilushling.flashlight.app",
@@ -59,21 +59,23 @@ public class MyReceiver extends BroadcastReceiver {
         }
 
         if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
-            screenOff = true;
+            screenState = false;
 
             Intent i = new Intent(context, FlashlightService.class);
-            i.putExtra("screen_state", screenOff);
-            i.putExtra("power_button", true);
+            i.setAction("powerButton");
+            i.putExtra("screen_state", screenState);
             context.startService(i);
-            //Log.e("daun: ", "t");
+
+            //Log.e(TAG, "screenStateOff = " + screenState);
         } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
-            screenOff = false;
+            screenState = true;
 
             Intent i = new Intent(context, FlashlightService.class);
-            i.putExtra("screen_state", screenOff);
-            i.putExtra("power_button", true);
+            i.setAction("powerButton");
+            i.putExtra("power_button", screenState);
             context.startService(i);
-            //Log.e("daun: ", "t1");
+
+            //Log.e(TAG, "screenStateOn = " + screenState);
         }
 
 

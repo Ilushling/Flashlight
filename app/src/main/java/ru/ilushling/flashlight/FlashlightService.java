@@ -31,8 +31,7 @@ public class FlashlightService extends Service {
     private String mCameraId;
     private boolean isCameraGet = false, isFlash, isFlashSos;
     int buttonPowercount, flashSosTimer;
-    boolean from_turnPowerFlash;
-    boolean taskfirst;
+    boolean powerButtonTaskfirst;
     List<String> flashMode;
 
     @Override
@@ -79,24 +78,23 @@ public class FlashlightService extends Service {
             new Thread(switchRunnable).start();
         } else if (action == "switchSos") {
             new Thread(switchSosRunnable).start();
-        } else {
-            from_turnPowerFlash = intent.getBooleanExtra("power_button", false);
-            if (from_turnPowerFlash) {
-                //boolean screenOn = intent.getBooleanExtra("screen_state", false);
-                if (buttonPowercount == 0) {
-                    powerButtonTask.run();
-                }
-                if (buttonPowercount >= 2) {
-                    //switchFlash();
-                    buttonPowercount = 0;
-                } else {
-                    buttonPowercount++;
-                }
+        } else if (action == "powerButton") {
+            Log.e(TAG, "powerbutton");
+            if (buttonPowercount == 0) {
+                powerButtonTask.run();
+            }
+            if (buttonPowercount >= 2) {
+                new Thread(switchRunnable).start();
+                buttonPowercount = 0;
+                powerButtonTaskfirst = false;
+                powerButtonHandler.removeCallbacksAndMessages(null);
+            } else {
+                buttonPowercount++;
             }
 
-            if (action == "app") {
-                updateUI.run();
-            }
+
+        } else if (action == "app") {
+            updateUI.run();
         }
 
         return START_REDELIVER_INTENT;
@@ -104,7 +102,7 @@ public class FlashlightService extends Service {
     }
 
     // Get the camera
-    void getCamera() {
+    private void getCamera() {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (mCameraManager == null) {
@@ -169,7 +167,7 @@ public class FlashlightService extends Service {
         }
     };
 
-    void turnOnSos() {
+    private void turnOnSos() {
         isFlashSos = true;
 
         if (!isCameraGet) {
@@ -181,7 +179,7 @@ public class FlashlightService extends Service {
     }
 
     // TURN ON FLASH
-    void turnOnFlash(String method) {
+    private void turnOnFlash(String method) {
         try {
             //Log.e(TAG, "Service 1");
             isFlash = true;
@@ -245,7 +243,7 @@ public class FlashlightService extends Service {
 
 
     // TURN OFF FLASH
-    void turnOffFlash(String method) {
+    private void turnOffFlash(String method) {
         try {
             // Update UI
             isFlash = false;
@@ -294,17 +292,22 @@ public class FlashlightService extends Service {
         }
     }
 
-    // power button zeroing counter
+    // Power button zeroing counter
+    /*
+     * First run of handle start timer via delay for few milliseconds
+     * Second run zeroing timer to 0
+     */
     private Handler powerButtonHandler = new Handler();
     private Runnable powerButtonTask = new Runnable() {
         @Override
         public void run() {
-            if (!taskfirst) {
+            //Log.e(TAG, "timer: " + taskfirst);
+            if (!powerButtonTaskfirst) {
                 powerButtonHandler.postDelayed(powerButtonTask, 1500);
-                taskfirst = true;
+                powerButtonTaskfirst = true;
             } else {
                 buttonPowercount = 0;
-                taskfirst = false;
+                powerButtonTaskfirst = false;
             }
 
         }
@@ -361,9 +364,12 @@ public class FlashlightService extends Service {
 
     public void onDestroy() {
         super.onDestroy();
+
+
+        Log.e(TAG, "onDestroy");
+
         turnOffFlash(null);
         unregisterReceiver(mReceiver);
-        Log.e(TAG, "FlashlightService onDestroy");
     }
 
 

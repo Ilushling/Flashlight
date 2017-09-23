@@ -78,7 +78,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             // Clean image memory
             buttonSwitchOn.recycle();
             buttonSwitchOff.recycle();
+            // Free receiver
             unregisterReceiver(broadcastReceiver);
+            // Kil process
+            //int id = android.os.Process.myPid();
+            //android.os.Process.killProcess(id);
         } catch (Exception e) {
             Log.e(TAG, "cant unregister receiver");
         }
@@ -111,7 +115,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onPause() {
         super.onPause();
-        unregisterReceiver(broadcastReceiver);
     }
 
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
