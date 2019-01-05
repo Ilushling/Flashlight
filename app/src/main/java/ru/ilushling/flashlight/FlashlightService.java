@@ -71,35 +71,12 @@ public class FlashlightService extends Service {
         startForeground(9955, builder);
     }
 
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent.getAction();
-
-        if (action == "switch" || action == "widget") {
-            new Thread(switchRunnable).start();
-        } else if (action == "switchSos") {
-            new Thread(switchSosRunnable).start();
-        } else if (action == "powerButton") {
-            Log.e(TAG, "powerbutton");
-            if (buttonPowercount == 0) {
-                powerButtonTask.run();
-            }
-            if (buttonPowercount >= 2) {
-                new Thread(switchRunnable).start();
-                buttonPowercount = 0;
-                powerButtonTaskfirst = false;
-                powerButtonHandler.removeCallbacksAndMessages(null);
-            } else {
-                buttonPowercount++;
-            }
-
-
-        } else if (action == "app") {
-            updateUI.run();
-        }
-
-        return START_REDELIVER_INTENT;
-        //return super.onStartCommand(intent, flags, startId);
-    }
+    // Power button zeroing counter
+    /*
+     * First run of handle start timer via delay for few milliseconds
+     * Second run zeroing timer to 0
+     */
+    private Handler powerButtonHandler = new Handler();
 
     // Get the camera
     private void getCamera() {
@@ -115,10 +92,6 @@ public class FlashlightService extends Service {
                     camera = Camera.open();
                     params = camera.getParameters();
                     flashMode = params.getSupportedFlashModes();
-                    params.setFlashMode(Parameters.FLASH_MODE_TORCH);
-                    camera.setParameters(params);
-                    camera.setPreviewTexture(new SurfaceTexture(1));
-                    camera.startPreview();
                 }
             }
 
@@ -201,16 +174,7 @@ public class FlashlightService extends Service {
                 if (camera != null) {
                     if (flashMode.contains(Parameters.FLASH_MODE_TORCH)) {
                         params.setFlashMode(Parameters.FLASH_MODE_TORCH);
-                        if (Build.VERSION.SDK_INT > 10) {
-                            try {
-                                camera.setPreviewTexture(new SurfaceTexture(0));
-                            } catch (Exception e) {
-                                Log.e("ale: ", "" + e);
-                            }
-                        }
                         camera.setParameters(params);
-                        camera.startPreview();
-                        //Log.e(TAG, "FLASH: " + flashMode);
                     } else {
                         if (flashMode.contains(Parameters.FLASH_MODE_ON)) {
                             params.setFlashMode(Parameters.FLASH_MODE_ON);
@@ -241,6 +205,141 @@ public class FlashlightService extends Service {
         }
     }
 
+    private Runnable powerButtonTask = new Runnable() {
+        @Override
+        public void run() {
+            //Log.e(TAG, "timer: " + taskfirst);
+            if (!powerButtonTaskfirst) {
+                powerButtonHandler.postDelayed(powerButtonTask, 1500);
+                powerButtonTaskfirst = true;
+            } else {
+                buttonPowercount = 0;
+                powerButtonTaskfirst = false;
+            }
+
+        }
+    };
+    // FlashSos timing
+    private Handler flashSosTimingHandler = new Handler();
+    private Runnable flashSosTimerTask = new Runnable() {
+        @Override
+        public void run() {
+
+            try {
+                // Timing SOS (3 short 3 long 3 short)
+                switch (flashSosTimer) {
+                    // [START SHORT]
+                    case 0:
+                        // FIRST ON
+                        flashSosTimingHandler.postDelayed(this, 500);
+                        break;
+                    case 1:
+                        // OFF
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    case 2:
+                        flashSosTimingHandler.postDelayed(this, 500);
+                        break;
+                    case 3:
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    case 4:
+                        flashSosTimingHandler.postDelayed(this, 500);
+                        break;
+                    case 5:
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    // [END short]
+
+                    // [START long]
+                    case 6:
+                        flashSosTimingHandler.postDelayed(this, 1500);
+                        break;
+                    case 7:
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    case 8:
+                        flashSosTimingHandler.postDelayed(this, 1500);
+                        break;
+                    case 9:
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    case 10:
+                        flashSosTimingHandler.postDelayed(this, 1500);
+                        break;
+                    case 11:
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    // [END long]
+
+                    // [START short]
+                    case 12:
+                        flashSosTimingHandler.postDelayed(this, 500);
+                        break;
+                    case 13:
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    case 14:
+                        flashSosTimingHandler.postDelayed(this, 500);
+                        break;
+                    case 15:
+                        flashSosTimingHandler.postDelayed(this, 300);
+                        break;
+                    case 16:
+                        flashSosTimingHandler.postDelayed(this, 500);
+                        break;
+                    case 17:
+                        // Final
+                        flashSosTimingHandler.postDelayed(this, 3000);
+                        flashSosTimer = 0;
+                        break;
+                    // [END short]
+                }
+
+                flashSosTimer++;
+
+                if (isFlash) {
+                    turnOffFlash("sos");
+                } else {
+                    turnOnFlash(null);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to get camera: " + e.getMessage());
+            }
+        }
+    };
+
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent.getAction();
+
+        if (action == "switch" || action == "widget") {
+            new Thread(switchRunnable).start();
+        } else if (action == "switchSos") {
+            new Thread(switchSosRunnable).start();
+        } else if (action == "powerButton") {
+            //Log.e(TAG, "powerbutton");
+
+            if (buttonPowercount == 0) {
+                powerButtonTask.run();
+            }
+            // 3 times
+            if (buttonPowercount >= 2) {
+                new Thread(switchRunnable).start();
+                buttonPowercount = 0;
+                powerButtonTaskfirst = false;
+                powerButtonHandler.removeCallbacksAndMessages(null);
+            } else {
+                buttonPowercount++;
+            }
+
+
+        } else if (action == "app") {
+            updateUI.run();
+        }
+
+        return START_REDELIVER_INTENT;
+        //return super.onStartCommand(intent, flags, startId);
+    }
 
     // TURN OFF FLASH
     private void turnOffFlash(String method) {
@@ -285,66 +384,14 @@ public class FlashlightService extends Service {
             // Update UI
             isFlash = false;
             updateUI.run();
+
+            //Log.e(TAG, "turn off");
         } catch (Exception e) {
             Log.e(TAG, "Failed turn off flash: " + e.getMessage());
             // Update UI
             turnOffFlash(null);
         }
     }
-
-    // Power button zeroing counter
-    /*
-     * First run of handle start timer via delay for few milliseconds
-     * Second run zeroing timer to 0
-     */
-    private Handler powerButtonHandler = new Handler();
-    private Runnable powerButtonTask = new Runnable() {
-        @Override
-        public void run() {
-            //Log.e(TAG, "timer: " + taskfirst);
-            if (!powerButtonTaskfirst) {
-                powerButtonHandler.postDelayed(powerButtonTask, 1500);
-                powerButtonTaskfirst = true;
-            } else {
-                buttonPowercount = 0;
-                powerButtonTaskfirst = false;
-            }
-
-        }
-    };
-
-    // FlashSos timing
-    private Handler flashSosTimingHandler = new Handler();
-    private Runnable flashSosTimerTask = new Runnable() {
-        @Override
-        public void run() {
-
-            try {
-                // TIMING
-                flashSosTimer++;
-                // 18 because every 3 actions need 6 runs (3 on and 3 off)
-                if (flashSosTimer >= 18) {
-                    flashSosTimer = 0;
-                    flashSosTimingHandler.postDelayed(this, 2000);
-                } else {
-                    if (flashSosTimer <= 6) {
-                        flashSosTimingHandler.postDelayed(this, 350);
-                    } else if (flashSosTimer <= 12) {
-                        flashSosTimingHandler.postDelayed(this, 650);
-                    } else {
-                        flashSosTimingHandler.postDelayed(this, 350);
-                    }
-                    if (isFlash) {
-                        turnOffFlash("sos");
-                    } else {
-                        turnOnFlash(null);
-                    }
-                }
-            } catch (Exception e) {
-                Log.e(TAG, "Failed to get camera: " + e.getMessage());
-            }
-        }
-    };
 
     private Runnable updateUI = new Runnable() {
         @Override

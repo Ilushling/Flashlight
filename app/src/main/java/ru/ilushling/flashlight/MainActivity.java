@@ -15,9 +15,6 @@ import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 
-import static ru.ilushling.flashlight.R.id.buttonsos;
-import static ru.ilushling.flashlight.R.id.buttonswitch;
-
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
@@ -35,8 +32,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        buttonSwitch = (ImageButton) findViewById(buttonswitch);
-        buttonSos = (ImageButton) findViewById(buttonsos);
+        buttonSwitch = findViewById(R.id.buttonSwitch);
+        buttonSos = findViewById(R.id.buttonSos);
 
         Resources res = this.getResources();
 
@@ -91,10 +88,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onClick(View view) {
         switch (view.getId()) {
-            case buttonswitch:
+            case R.id.buttonSwitch:
                 switchFlash();
                 break;
-            case buttonsos:
+            case R.id.buttonSos:
                 switchFlashSos();
                 break;
         }
