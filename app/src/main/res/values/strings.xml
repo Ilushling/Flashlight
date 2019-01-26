@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">Flashlight</string>
-    <string name="widgetlabel">1 Flashlight</string>
+    <string name="ad_app_id" translatable="false">ca-app-pub-6738001047057973~3049231179</string>
+    <string name="banner_ad_unit_id" translatable="false">ca-app-pub-6738001047057973/5284635987</string>
+
+    <string name="widget_label">Flashlight</string>
+    <string name="touch_to_switch">Touch to switch</string>
+    <string name="turn_off">Turn off</string>
 </resources>

@@ -1,6 +1,8 @@
 package ru.ilushling.flashlight;
 
 import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -12,16 +14,21 @@ import android.hardware.Camera;
 import android.hardware.Camera.Parameters;
 import android.hardware.camera2.CameraManager;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
 import android.util.Log;
 
+import com.google.firebase.analytics.FirebaseAnalytics;
+
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public class FlashlightService extends Service {
 
     String TAG = "Service";
+    public static final String NOTIFICATION_CHANNEL_ID = "ilushling.flashlight", NOTIFICATION_CHANNEL_NAME = "screenfilter";
 
     BroadcastReceiver mReceiver;
 
@@ -33,178 +40,14 @@ public class FlashlightService extends Service {
     int buttonPowercount, flashSosTimer;
     boolean powerButtonTaskfirst;
     List<String> flashMode;
-
-    @Override
-    public void onCreate() {
-        super.onCreate();
-
-        // Screen listener
-        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
-        filter.addAction(Intent.ACTION_SCREEN_OFF);
-        mReceiver = new MyReceiver();
-        registerReceiver(mReceiver, filter);
-
-        // Notification Switch
-        Intent intentSwitch = new Intent(this, MyReceiver.class);
-        intentSwitch.setAction(MyReceiver.ACTION_SWITCH);
-        PendingIntent pIntentSwitch = PendingIntent.getBroadcast(this, 0, intentSwitch, PendingIntent.FLAG_UPDATE_CURRENT);
-        // Notification Close
-        Intent intentServiceOff = new Intent(this, MyReceiver.class);
-        intentServiceOff.setAction(MyReceiver.ACTION_SERVICE_OFF);
-        PendingIntent pIntentServiceOff = PendingIntent.getBroadcast(this, 0, intentServiceOff, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        // Строим уведомление
-        Notification builder = null;
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
-            builder = new Notification.Builder(getApplicationContext())
-                    .setContentTitle("Фонарик")
-                    .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentIntent(pIntentSwitch)
-                    .setContentText("Нажмите, чтобы переключить")
-                    .addAction(R.mipmap.ic_launcher, "Выключить", pIntentServiceOff)
-                    .build();
-        }
-
-        // убираем уведомление, когда его выбрали
-        //builder.flags |= Notification.FLAG_AUTO_CANCEL;
-        //notificationManager.notify(0, builder);
-        startForeground(9955, builder);
-    }
-
+    public static final int ID_SERVICE = 99543;
+    private FirebaseAnalytics mFirebaseAnalytics;
     // Power button zeroing counter
     /*
      * First run of handle start timer via delay for few milliseconds
      * Second run zeroing timer to 0
      */
     private Handler powerButtonHandler = new Handler();
-
-    // Get the camera
-    private void getCamera() {
-        try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                if (mCameraManager == null) {
-                    mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
-                    mCameraId = mCameraManager.getCameraIdList()[0];
-                }
-            } else {
-                if (camera == null) {
-                    // Open
-                    camera = Camera.open();
-                    params = camera.getParameters();
-                    flashMode = params.getSupportedFlashModes();
-                }
-            }
-
-            isCameraGet = true;
-        } catch (Exception e) {
-            isCameraGet = false;
-            isFlash = false;
-            isFlashSos = false;
-            Log.e(TAG, "GetCamera: " + e.getMessage());
-        }
-    }
-
-    // Switch Flash
-    private Runnable switchRunnable = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                if (isFlash || isFlashSos) {
-                    // turn off flash
-                    turnOffFlash(null);
-                } else if (!isFlash) {
-                    // turn on flash
-                    turnOnFlash(null);
-                }
-            } catch (RuntimeException e) {
-                Log.e(TAG, "SwitchFlash: " + e.getMessage());
-            }
-        }
-    };
-    // Switch FlashSos
-    private Runnable switchSosRunnable = new Runnable() {
-        @Override
-        public void run() {
-            try {
-                if (isFlashSos) {
-                    // turn off flash
-                    turnOffFlash(null);
-                    isFlashSos = false;
-                } else if (!isFlash && !isFlashSos) {
-                    // turn on flash
-                    turnOnSos();
-                }
-            } catch (RuntimeException e) {
-                Log.e(TAG, "SwitchSos: " + e.getMessage());
-            }
-        }
-    };
-
-    private void turnOnSos() {
-        isFlashSos = true;
-
-        if (!isCameraGet) {
-            getCamera();
-        }
-
-        flashSosTimer = 0;
-        flashSosTimerTask.run();
-    }
-
-    // TURN ON FLASH
-    private void turnOnFlash(String method) {
-        try {
-            //Log.e(TAG, "Service 1");
-            isFlash = true;
-            // UI
-            if (method != "sos") {
-                updateUI.run();
-            }
-
-            // Getting camera too long for UI
-            if (!isCameraGet) {
-                getCamera();
-            }
-
-            //Log.e(TAG, "Service 2");
-            // Turn on Flash
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                mCameraManager.setTorchMode(mCameraId, true);
-            } else {
-                if (camera != null) {
-                    if (flashMode.contains(Parameters.FLASH_MODE_TORCH)) {
-                        params.setFlashMode(Parameters.FLASH_MODE_TORCH);
-                        camera.setParameters(params);
-                    } else {
-                        if (flashMode.contains(Parameters.FLASH_MODE_ON)) {
-                            params.setFlashMode(Parameters.FLASH_MODE_ON);
-                        } else if (flashMode.contains(Parameters.FLASH_MODE_AUTO)) {
-                            params.setFlashMode(Parameters.FLASH_MODE_AUTO);
-                        } else if (flashMode.contains(Parameters.FLASH_MODE_RED_EYE)) {
-                            params.setFlashMode(Parameters.FLASH_MODE_RED_EYE);
-                        } else {
-                            isFlash = false;
-                            updateUI.run();
-                        }
-                        if (Build.VERSION.SDK_INT > 10) {
-                            try {
-                                camera.setPreviewTexture(new SurfaceTexture(0));
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                        camera.setParameters(params);
-                        camera.startPreview();
-                        camera.autoFocus(null);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to get camera: " + e.getMessage());
-            turnOffFlash(null);
-        }
-    }
-
     private Runnable powerButtonTask = new Runnable() {
         @Override
         public void run() {
@@ -301,22 +144,225 @@ public class FlashlightService extends Service {
                 if (isFlash) {
                     turnOffFlash("sos");
                 } else {
-                    turnOnFlash(null);
+                    turnOnFlash("");
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Failed to get camera: " + e.getMessage());
             }
         }
     };
+    // Switch Flash
+    private Runnable switchRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (isFlash || isFlashSos) {
+                    // turn off flash
+                    turnOffFlash("");
+                } else {
+                    // turn on flash
+                    turnOnFlash("");
+                }
+            } catch (RuntimeException e) {
+                //Log.e(TAG, "SwitchFlash: " + e.getMessage());
+            }
+        }
+    };
+    // Switch FlashSos
+    private Runnable switchSosRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                if (isFlashSos) {
+                    // turn off flash
+                    turnOffFlash("");
+                    isFlashSos = false;
+                } else if (!isFlash) {
+                    // turn on flash
+                    turnOnSos();
+                }
+            } catch (RuntimeException e) {
+                Log.e(TAG, "SwitchSos: " + e.getMessage());
+            }
+        }
+    };
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+
+        // Screen listener
+        IntentFilter filter = new IntentFilter(Intent.ACTION_SCREEN_ON);
+        filter.addAction(Intent.ACTION_SCREEN_OFF);
+        mReceiver = new MyReceiver();
+        registerReceiver(mReceiver, filter);
+
+        startNotification();
+    }
+
+    void startNotification() {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            // Notification Switch
+            // Prepare
+            NotificationManager mNotificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+
+            Intent intentSwitch = new Intent(this, MyReceiver.class);
+            intentSwitch.setAction(MyReceiver.ACTION_SWITCH);
+            PendingIntent pIntentSwitch = PendingIntent.getBroadcast(this, 0, intentSwitch, PendingIntent.FLAG_UPDATE_CURRENT);
+            // Notification Close
+            Intent intentServiceOff = new Intent(this, MyReceiver.class);
+            intentServiceOff.setAction(MyReceiver.ACTION_SERVICE_OFF);
+            PendingIntent pIntentServiceOff = PendingIntent.getBroadcast(this, 0, intentServiceOff, PendingIntent.FLAG_UPDATE_CURRENT);
+
+            Notification.Builder notification;
+            // Build notification
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                if (mNotificationManager != null) {
+                    int importance = NotificationManager.IMPORTANCE_MIN;
+                    NotificationChannel notificationChannel = new NotificationChannel(NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, importance);
+                    mNotificationManager.createNotificationChannel(notificationChannel);
+                }
+                notification = new Notification.Builder(this, NOTIFICATION_CHANNEL_ID)
+                        .setContentTitle(getString(R.string.app_name))
+                        .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentIntent(pIntentSwitch)
+                        .setContentText(getString(R.string.touch_to_switch))
+                        .addAction(R.mipmap.ic_launcher, getString(R.string.turn_off), pIntentServiceOff);
+            } else {
+                notification = new Notification.Builder(this)
+                        .setContentTitle(getString(R.string.app_name))
+                        .setSmallIcon(R.mipmap.ic_launcher)
+                        .setContentIntent(pIntentSwitch)
+                        .setContentText(getString(R.string.touch_to_switch))
+                        .addAction(R.mipmap.ic_launcher, getString(R.string.turn_off), pIntentServiceOff);
+            }
+
+            if (mNotificationManager != null) {
+                mNotificationManager.notify(ID_SERVICE, notification.build());
+                startForeground(ID_SERVICE, notification.build());
+            }
+        }
+    }
+
+    private void turnOnSos() {
+        isFlashSos = true;
+
+        if (!isCameraGet) {
+            getCamera();
+        }
+
+        flashSosTimer = 0;
+        flashSosTimerTask.run();
+    }
+
+    // Get the camera
+    private void getCamera() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (mCameraManager == null) {
+                    mCameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                    if (mCameraManager != null) {
+                        mCameraId = mCameraManager.getCameraIdList()[0];
+                    }
+                }
+            } else {
+                if (camera == null) {
+                    // Open
+                    camera = Camera.open();
+                    params = camera.getParameters();
+                    flashMode = params.getSupportedFlashModes();
+                }
+            }
+
+            isCameraGet = true;
+        } catch (Exception e) {
+            isCameraGet = false;
+            isFlash = false;
+            isFlashSos = false;
+            Log.e(TAG, "GetCamera: " + e.getMessage());
+
+
+            Bundle bundle = new Bundle();
+            bundle.putString("error", e + "");
+            mFirebaseAnalytics.logEvent("error_getCamera", bundle);
+        }
+    }
+
+    // TURN ON FLASH
+    private void turnOnFlash(String method) {
+        method = method != null ? method : "";
+        try {
+            //Log.e(TAG, "Service 1");
+            isFlash = true;
+            // UI
+            if (!method.equals("sos")) {
+                updateUI.run();
+            }
+
+            // Getting camera too long for UI
+            if (!isCameraGet) {
+                getCamera();
+            }
+
+            //Log.e(TAG, "Service 2");
+            // Turn on Flash
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                mCameraManager.setTorchMode(mCameraId, true);
+            } else {
+                if (camera != null) {
+                    if (flashMode.contains(Parameters.FLASH_MODE_TORCH)) {
+                        params.setFlashMode(Parameters.FLASH_MODE_TORCH);
+                        camera.setParameters(params);
+                    } else {
+                        if (flashMode.contains(Parameters.FLASH_MODE_ON)) {
+                            params.setFlashMode(Parameters.FLASH_MODE_ON);
+                        } else if (flashMode.contains(Parameters.FLASH_MODE_AUTO)) {
+                            params.setFlashMode(Parameters.FLASH_MODE_AUTO);
+                        } else if (flashMode.contains(Parameters.FLASH_MODE_RED_EYE)) {
+                            params.setFlashMode(Parameters.FLASH_MODE_RED_EYE);
+                        } else {
+                            isFlash = false;
+                            updateUI.run();
+                        }
+                        if (Build.VERSION.SDK_INT > 10) {
+                            try {
+                                camera.setPreviewTexture(new SurfaceTexture(0));
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        camera.setParameters(params);
+                        camera.startPreview();
+                        camera.autoFocus(null);
+                    }
+                }
+            }
+
+            Bundle bundle = new Bundle();
+            ArrayList allWords = new ArrayList<>(params.getSupportedFlashModes());
+            bundle.putStringArrayList("flashModes", allWords);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed turn on: " + e.getMessage());
+            Bundle bundle = new Bundle();
+            bundle.putString("error", e + "");
+            ArrayList allWords = new ArrayList<>(params.getSupportedFlashModes());
+            bundle.putStringArrayList("errorFlashModes", allWords);
+            mFirebaseAnalytics.logEvent("error_turn_on", bundle);
+
+            turnOffFlash("");
+        }
+    }
 
     public int onStartCommand(Intent intent, int flags, int startId) {
-        String action = intent.getAction();
+        String action = intent.getAction() != null ? intent.getAction() : "";
 
-        if (action == "switch" || action == "widget") {
+        if (action.equals("switch") || action.equals("widget")) {
             new Thread(switchRunnable).start();
-        } else if (action == "switchSos") {
+        } else if (action.equals("switchSos")) {
             new Thread(switchSosRunnable).start();
-        } else if (action == "powerButton") {
+        } else if (action.equals("powerButton")) {
             //Log.e(TAG, "powerbutton");
 
             if (buttonPowercount == 0) {
@@ -333,7 +379,7 @@ public class FlashlightService extends Service {
             }
 
 
-        } else if (action == "app") {
+        } else if (action.equals("app")) {
             updateUI.run();
         }
 
@@ -350,7 +396,7 @@ public class FlashlightService extends Service {
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 mCameraManager.setTorchMode(mCameraId, false);
-                if (method != "sos") {
+                if (!method.equals("sos")) {
                     flashSosTimingHandler.removeCallbacks(flashSosTimerTask);
 
                     mCameraManager = null;
@@ -360,11 +406,14 @@ public class FlashlightService extends Service {
                     isFlash = false;
                     isFlashSos = false;
                 }
+                // Update UI
+                isFlash = false;
+                updateUI.run();
             } else {
                 if (camera != null) {
                     params.setFlashMode(Parameters.FLASH_MODE_OFF);
                     camera.setParameters(params);
-                    if (method != "sos") {
+                    if (!method.equals("sos")) {
                         flashSosTimingHandler.removeCallbacks(flashSosTimerTask);
 
                         params.setFlashMode(Parameters.FLASH_MODE_OFF);
@@ -377,19 +426,22 @@ public class FlashlightService extends Service {
                         isFlash = false;
                         isFlashSos = false;
                     }
+                    // Update UI
                     isFlash = false;
+                    updateUI.run();
                 }
-                isFlash = false;
             }
-            // Update UI
-            isFlash = false;
-            updateUI.run();
 
             //Log.e(TAG, "turn off");
         } catch (Exception e) {
             Log.e(TAG, "Failed turn off flash: " + e.getMessage());
+
+            Bundle bundle = new Bundle();
+            bundle.putString("error", e + "");
+            mFirebaseAnalytics.logEvent("error_turn_off", bundle);
+
             // Update UI
-            turnOffFlash(null);
+            turnOffFlash("");
         }
     }
 
@@ -412,10 +464,9 @@ public class FlashlightService extends Service {
     public void onDestroy() {
         super.onDestroy();
 
-
         Log.e(TAG, "onDestroy");
 
-        turnOffFlash(null);
+        turnOffFlash("");
         unregisterReceiver(mReceiver);
     }
 

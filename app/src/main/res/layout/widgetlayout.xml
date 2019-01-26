@@ -9,8 +9,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="@null"
+        android:contentDescription="@string/widget_label"
         android:scaleType="fitCenter"
-        android:src="@drawable/widget_flash_off"
-        android:text="Flash1"/>
+        android:src="@drawable/widget_flash_off"/>
 
 </LinearLayout>

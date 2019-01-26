@@ -3,6 +3,7 @@ package ru.ilushling.flashlight;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.util.Log;
 import android.widget.RemoteViews;
 
@@ -21,7 +22,9 @@ public class MyReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        if (intent.getAction().equals(ACTION_IS_FLASH)) {
+        String action = intent.getAction() != null ? intent.getAction() : "";
+
+        if (action.equals(ACTION_IS_FLASH)) {
             // Flash
             isFlash = intent.getBooleanExtra("isFlash", false);
             // Activity
@@ -32,49 +35,71 @@ public class MyReceiver extends BroadcastReceiver {
             // Widget
             updateWidget(context, isFlash);
         }
-        if (intent.getAction().equals(ACTION_APP)) {
+        if (action.equals(ACTION_APP)) {
             Intent i = new Intent(context, FlashlightService.class);
             i.setAction("app");
-            context.startService(i);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(i);
+            } else {
+                context.startService(i);
+            }
         }
-        if (intent.getAction().equals(ACTION_WIDGET)) {
+        if (action.equals(ACTION_WIDGET)) {
             Intent i = new Intent(context, FlashlightService.class);
             i.setAction("widget");
-            context.startService(i);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(i);
+            } else {
+                context.startService(i);
+            }
         }
-        if (intent.getAction().equals(ACTION_SWITCH)) {
+        if (action.equals(ACTION_SWITCH)) {
             Intent i = new Intent(context, FlashlightService.class);
             i.setAction("switch");
-            context.startService(i);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(i);
+            } else {
+                context.startService(i);
+            }
         }
-        if (intent.getAction().equals(ACTION_SWITCH_SOS)) {
+        if (action.equals(ACTION_SWITCH_SOS)) {
             Intent i = new Intent(context, FlashlightService.class);
             i.setAction("switchSos");
-            context.startService(i);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(i);
+            } else {
+                context.startService(i);
+            }
         }
-        if (intent.getAction().equals(ACTION_SERVICE_OFF)) {
+        if (action.equals(ACTION_SERVICE_OFF)) {
             Intent i = new Intent(context, FlashlightService.class);
             i.setAction("serviceOff");
             context.stopService(i);
         }
 
-        if (intent.getAction().equals(Intent.ACTION_SCREEN_OFF)) {
+        if (action.equals(Intent.ACTION_SCREEN_OFF)) {
             screenState = false;
 
             Intent i = new Intent(context, FlashlightService.class);
             i.setAction("powerButton");
             i.putExtra("screen_state", screenState);
-            context.startService(i);
-
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(i);
+            } else {
+                context.startService(i);
+            }
             //Log.e(TAG, "screenStateOff = " + screenState);
-        } else if (intent.getAction().equals(Intent.ACTION_SCREEN_ON)) {
+        } else if (action.equals(Intent.ACTION_SCREEN_ON)) {
             screenState = true;
 
             Intent i = new Intent(context, FlashlightService.class);
             i.setAction("powerButton");
             i.putExtra("power_button", screenState);
-            context.startService(i);
-
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(i);
+            } else {
+                context.startService(i);
+            }
             //Log.e(TAG, "screenStateOn = " + screenState);
         }
 
