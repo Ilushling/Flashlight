@@ -32,10 +32,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private FirebaseAnalytics mFirebaseAnalytics;
     private FirebaseRemoteConfig mFirebaseRemoteConfig;
     private AdView mAdView;
-
     ImageButton buttonSwitch, buttonSos;
-
     Bitmap buttonSwitchOn, buttonSwitchOff;
+
     private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -56,6 +55,61 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
     };
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+
+        mAdView = findViewById(R.id.adView);
+        MobileAds.initialize(this, getString(R.string.ad_app_id));
+
+        Bundle bundle = new Bundle();
+        mFirebaseAnalytics.logEvent("open_app", bundle);
+
+        // ADS
+        // Remote settings
+        mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
+        FirebaseRemoteConfigSettings remoteConfigSettings = new FirebaseRemoteConfigSettings.Builder()
+                .setDeveloperModeEnabled(false)
+                .build();
+        mFirebaseRemoteConfig.setConfigSettings(remoteConfigSettings);
+        mFirebaseRemoteConfig.setDefaults(R.xml.remote_config_defaults);
+        fetchRemoteConfig();
+        boolean enableAd = mFirebaseRemoteConfig.getBoolean("enableAd");
+
+        if (enableAd) {
+            showAd();
+        }
+        Log.e(TAG, "enableAd: " + enableAd);
+
+        buttonSwitch = findViewById(R.id.buttonSwitch);
+        buttonSos = findViewById(R.id.buttonSos);
+
+        Resources res = this.getResources();
+
+        buttonSwitchOn = BitmapFactory.decodeResource(res, R.drawable.main_button_on);
+        buttonSwitchOff = BitmapFactory.decodeResource(res, R.drawable.main_button_off);
+
+        //Bitmap b = BitmapFactory.decodeResource(res, id);
+
+        if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
+            View v = this.getWindow().getDecorView();
+            v.setSystemUiVisibility(View.GONE);
+        } else if (Build.VERSION.SDK_INT >= 19) {
+            //for new api versions.
+            View decorView = getWindow().getDecorView();
+            int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
+            decorView.setSystemUiVisibility(uiOptions);
+        }
+        // присвоим обработчик кнопке
+        buttonSos.setOnClickListener(this);
+        // присвоим обработчик кнопке
+        buttonSwitch.setOnClickListener(this);
+    }
 
     @Override
     protected void onStart() {
@@ -109,62 +163,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         sendBroadcast(intent);
     }
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
-
-        mAdView = findViewById(R.id.adView);
-        MobileAds.initialize(this, "@string/banner_ad_unit_id");
-
-        Bundle bundle = new Bundle();
-        mFirebaseAnalytics.logEvent("open_app", bundle);
-
-        // ADS
-        // Remote settings
-        mFirebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
-        FirebaseRemoteConfigSettings remoteConfigSettings = new FirebaseRemoteConfigSettings.Builder()
-                .setDeveloperModeEnabled(false)
-                .build();
-        mFirebaseRemoteConfig.setConfigSettings(remoteConfigSettings);
-        mFirebaseRemoteConfig.setDefaults(R.xml.remote_config_defaults);
-        fetchRemoteConfig();
-        boolean enableAd = mFirebaseRemoteConfig.getBoolean("enableAd");
-
-        if (enableAd) {
-            showAd();
-        }
-        //Log.e(TAG, "enableAd: " + enableAd);
-
-        buttonSwitch = findViewById(R.id.buttonSwitch);
-        buttonSos = findViewById(R.id.buttonSos);
-
-        Resources res = this.getResources();
-
-        buttonSwitchOn = BitmapFactory.decodeResource(res, R.drawable.main_button_on);
-        buttonSwitchOff = BitmapFactory.decodeResource(res, R.drawable.main_button_off);
-
-        //Bitmap b = BitmapFactory.decodeResource(res, id);
-
-        if (Build.VERSION.SDK_INT > 11 && Build.VERSION.SDK_INT < 19) { // lower api
-            View v = this.getWindow().getDecorView();
-            v.setSystemUiVisibility(View.GONE);
-        } else if (Build.VERSION.SDK_INT >= 19) {
-            //for new api versions.
-            View decorView = getWindow().getDecorView();
-            int uiOptions = View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;
-            decorView.setSystemUiVisibility(uiOptions);
-        }
-        // присвоим обработчик кнопке
-        buttonSos.setOnClickListener(this);
-        // присвоим обработчик кнопке
-        buttonSwitch.setOnClickListener(this);
-    }
-
     void showAd() {
-        AdRequest adRequest = new AdRequest.Builder().addTestDevice("1D5A1AEA8E6CA40D5189183547904B82").addTestDevice("3EC30EB95D85614AD55C26E956492D9E").build();
+        AdRequest adRequest = new AdRequest.Builder().build();
         mAdView = findViewById(R.id.adView);
         mAdView.loadAd(adRequest);
         mAdView.setVisibility(View.VISIBLE);
